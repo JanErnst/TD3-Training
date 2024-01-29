@@ -111,7 +111,7 @@ class TD3(object):
     
     for it in range(iterations):
 
-      # Step 4: we sample a batch of transitions (s, s`, a, r) from the memory
+      # Step 4:  sample a batch of transitions (s, s`, a, r) from the memory
       batch_states, batch_next_states, batch_actions,  batch_rewards, batch_dones = replay_buffer.sample(batch_size)
       state = torch.Tensor(batch_states).to(device)
       next_state = torch.Tensor(batch_next_states).to(device)
@@ -122,7 +122,7 @@ class TD3(object):
       # Step 5: From the next state s', the Action target plays the next action a'
       next_action = self.actor_target(next_state)
 
-      # Step 6: We add gaussian noise to this next action a' and we clamo it in a range of values supported by the environment
+      # Step 6:  add gaussian noise to this next action a' and  clamo it in a range of values supported by the environment
       noise = torch.tensor(batch_actions).data.normal_(0, policy_noise).to(device)
       noise = noise.clamp(-noise_clip, noise_clip)
       next_action = (next_action + noise).clamp(-self.max_action, self.max_action)
@@ -130,10 +130,10 @@ class TD3(object):
       #Step 7: The two critic targets take each the couple (s', a')  as input and return two Q-Values as outputs
       target_Q1, target_Q2 = self.critic_target(next_state, next_action)
 
-      #Step 8:We keep the minimum of these two Q-values: min(Qt1, Qt2)
+      #Step 8: keep the minimum of these two Q-values: min(Qt1, Qt2)
       target_Q = torch.min(target_Q1, target_Q2)
 
-      #Step 9: We get the final targetr of the two ciritc models, which is: Qt = r + y + min(Qt1, Qt2), where y is the discount factor
+      #Step 9:  get the final targetr of the two ciritc models, which is: Qt = r + y + min(Qt1, Qt2), where y is the discount factor
       target_Q = reward + ((1 - done) * discount * target_Q)detach()
 
       #Step 10:
@@ -243,25 +243,25 @@ episode_num = 0
 done = True
 t0 = time.time()
 
-# We start the main loop over 500,000 timesteps
+#  start the main loop over 500,000 timesteps
 while total_timesteps < max_timesteps:
   
   # If the episode is done
   if done:
 
-    # If we are not at the very beginning, we start the training process of the model
+    # If  are not at the very beginning,  start the training process of the model
     if total_timesteps != 0:
       print("Total Timesteps: {} Episode Num: {} Reward: {}".format(total_timesteps, episode_num, episode_reward))
       policy.train(replay_buffer, episode_timesteps, batch_size, discount, tau, policy_noise, noise_clip, policy_freq)
 
-    # We evaluate the episode and we save the policy
+    #  evaluate the episode and  save the policy
     if timesteps_since_eval >= eval_freq:
       timesteps_since_eval %= eval_freq
       evaluations.append(evaluate_policy(policy))
       policy.save(file_name, directory="./pytorch_models")
       np.save("./results/%s" % (file_name), evaluations)
     
-    # When the training step is done, we reset the state of the environment
+    # When the training step is done,  reset the state of the environment
     obs = env.reset()
     
     # Set the Done to False
@@ -272,34 +272,34 @@ while total_timesteps < max_timesteps:
     episode_timesteps = 0
     episode_num += 1
   
-  # Before 10000 timesteps, we play random actions
+  # Before 10000 timesteps,  play random actions
   if total_timesteps < start_timesteps:
     action = env.action_space.sample()
-  else: # After 10000 timesteps, we switch to the model
+  else: # After 10000 timesteps,  switch to the model
     action = policy.select_action(np.array(obs))
-    # If the explore_noise parameter is not 0, we add noise to the action and we clip it
+    # If the explore_noise parameter is not 0,  add noise to the action and  clip it
     if expl_noise != 0:
       action = (action + np.random.normal(0, expl_noise, size=env.action_space.shape[0])).clip(env.action_space.low, env.action_space.high)
   
   # The agent performs the action in the environment, then reaches the next state and receives the reward
   new_obs, reward, done, _ = env.step(action)
   
-  # We check if the episode is done
+  #  check if the episode is done
   done_bool = 0 if episode_timesteps + 1 == env._max_episode_steps else float(done)
   
-  # We increase the total reward
+  #  increase the total reward
   episode_reward += reward
   
-  # We store the new transition into the Experience Replay memory (ReplayBuffer)
+  #  store the new transition into the Experience Replay memory (ReplayBuffer)
   replay_buffer.add((obs, new_obs, action, reward, done_bool))
 
-  # We update the state, the episode timestep, the total timesteps, and the timesteps since the evaluation of the policy
+  #  update the state, the episode timestep, the total timesteps, and the timesteps since the evaluation of the policy
   obs = new_obs
   episode_timesteps += 1
   total_timesteps += 1
   timesteps_since_eval += 1
 
-# We add the last policy evaluation to our list of evaluations and we save our model
+#  add the last policy evaluation to our list of evaluations and  save our model
 evaluations.append(evaluate_policy(policy))
 if save_models: policy.save("%s" % (file_name), directory="./pytorch_models")
 np.save("./results/%s" % (file_name), evaluations)
